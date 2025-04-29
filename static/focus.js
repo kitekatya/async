@@ -27,22 +27,19 @@ run();
 
 function sendRequest(url) {
     return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("GET", url, true);
-
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === XMLHttpRequest.DONE) {
-                if (xhr.status === 200) {
-                    resolve(JSON.parse(xhr.response));
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    reject(`Request failed with status: ${response.status}`);
                 } else {
-                    reject(`Request failed with status: ${xhr.status}`);
+                    return response.json();
                 }
-            }
-        };
-
-        xhr.send();
+            })
+            .then(data => resolve(data))
+            .catch(error => reject(`Fetch error: ${error}`));
     });
 }
+
 
 function reqsToMap(requisites) {
     return requisites.reduce((acc, item) => {
