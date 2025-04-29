@@ -5,22 +5,26 @@ const API = {
     buhForms: "/api3/buh",
 };
 
-function run() {
-    (async () => {
-        try {
-            const orgOgrns = await sendRequest(API.organizationList);
-            const ogrns = orgOgrns.join(",");
-            const requisites = await sendRequest(`${API.orgReqs}?ogrn=${ogrns}`);
+async function run() {
+    const orgOgrns = await sendRequest(API.organizationList);
+    const ogrns = orgOgrns.join(",");
+
+    const promises = [
+        sendRequest(`${API.orgReqs}?ogrn=${ogrns}`),
+        sendRequest(`${API.analytics}?ogrn=${ogrns}`),
+        sendRequest(`${API.buhForms}?ogrn=${ogrns}`)
+    ];
+
+    Promise.all(promises)
+        .then(results => {
+            const requisites = results[0];
+            const analytics = results[1];
+            const buh = results[2];
             const orgsMap = reqsToMap(requisites);
-            const analytics = await sendRequest(`${API.analytics}?ogrn=${ogrns}`);
             addInOrgsMap(orgsMap, analytics, "analytics");
-            const buh = await sendRequest(`${API.buhForms}?ogrn=${ogrns}`);
             addInOrgsMap(orgsMap, buh, "buhForms");
             render(orgsMap, orgOgrns);
-        } catch (error) {
-            console.error("Error during requests:", error);
-        }
-    })();
+        })
 }
 
 run();
@@ -30,15 +34,21 @@ function sendRequest(url) {
         fetch(url)
             .then(response => {
                 if (!response.ok) {
+                    // Если статус ответа >= 300, выводим ошибку
                     reject(`Request failed with status: ${response.status}`);
-                } else {
-                    return response.json();
+                    alert(`Error: Status Code ${response.status}. Request failed for ${url}`);
+                    return;
                 }
+                return response.json();
             })
             .then(data => resolve(data))
-            .catch(error => reject(`Fetch error: ${error}`));
+            .catch(error => {
+                console.error(`Fetch error: ${error}`);
+                reject(`Fetch error: ${error}`);
+            });
     });
 }
+
 
 
 function reqsToMap(requisites) {
